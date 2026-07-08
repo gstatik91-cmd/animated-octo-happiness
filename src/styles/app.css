@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+@theme {
+  --color-anime-50: #f0e6ff;
+  --color-anime-100: #d9b3ff;
+  --color-anime-200: #c080ff;
+  --color-anime-300: #a64dff;
+  --color-anime-400: #8c1aff;
+  --color-anime-500: #7300e6;
+  --color-anime-600: #5c00b8;
+  --color-anime-700: #45008a;
+  --color-anime-800: #2e005c;
+  --color-anime-900: #17002e;
+  --color-anime-dark: #0a0015;
+  --color-surface: #111118;
+  --color-surface-light: #1a1a24;
+  --color-surface-lighter: #24243a;
+  --color-accent: #e94560;
+  --color-accent-light: #f0627a;
+  --color-neon-blue: #4fc3f7;
+  --color-neon-purple: #b388ff;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-anime-dark text-gray-100 antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-surface;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-lighter rounded-full hover:bg-anime-400 transition-colors;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-lg font-semibold 
+           bg-gradient-to-r from-anime-500 to-accent text-white 
+           hover:from-anime-400 hover:to-accent-light 
+           transition-all duration-300 shadow-lg shadow-anime-500/25 
+           hover:shadow-xl hover:shadow-anime-500/40 
+           active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-lg font-semibold 
+           border border-gray-600 text-gray-200 
+           hover:border-anime-400 hover:text-white 
+           transition-all duration-300 
+           active:scale-95;
+  }
+
+  .btn-premium {
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-lg font-semibold 
+           bg-gradient-to-r from-yellow-400 to-orange-500 text-gray-900 
+           hover:from-yellow-300 hover:to-orange-400 
+           transition-all duration-300 shadow-lg shadow-yellow-500/25 
+           hover:shadow-xl hover:shadow-yellow-500/40 
+           active:scale-95;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-anime-500/10;
+  }
+
+  .glass-card {
+    @apply bg-surface/80 backdrop-blur-md border border-white/5 rounded-xl;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-anime-300 via-neon-blue to-accent bg-clip-text text-transparent;
+  }
+
+  .anime-grid {
+    @apply grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6;
+  }
+
+  .fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .slide-up {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+}
