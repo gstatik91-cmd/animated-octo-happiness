@@ -1,38 +1,51 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { animeList } from "~/data/anime";
-import type { Anime } from "~/data/anime";
-import { AnimeCard } from "~/components/AnimeCard";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { fetchWatchlist, removeWatchlistItem } from "~/lib/api";
+
+// For MVP, we use a simple user ID from localStorage
+function getUserId(): string | null {
+  try {
+    const session = JSON.parse(localStorage.getItem("aniFlow_session") || "null");
+    return session?.id || null;
+  } catch {
+    return null;
+  }
+}
 
 export const Route = createFileRoute("/watchlist")({
   component: Watchlist,
 });
 
 function Watchlist() {
-  // In a real app, this would come from a database. For MVP, we use localStorage.
-  const [watchlist, setWatchlist] = useState<string[]>([]);
-  const [items, setItems] = useState<Anime[]>([]);
+  const navigate = useNavigate();
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem("aniFlow_watchlist");
-    if (saved) {
-      try {
-        const ids = JSON.parse(saved) as string[];
-        setWatchlist(ids);
-        setItems(animeList.filter((a) => ids.includes(a.id)));
-      } catch {
-        setWatchlist([]);
-        setItems([]);
-      }
-    }
+    const id = getUserId();
+    setUserId(id);
   }, []);
 
-  const removeFromWatchlist = (id: string) => {
-    const updated = watchlist.filter((w) => w !== id);
-    setWatchlist(updated);
-    setItems(items.filter((a) => a.id !== id));
-    localStorage.setItem("aniFlow_watchlist", JSON.stringify(updated));
+  const { data: items = [], refetch } = useSuspenseQuery({
+    queryKey: ["watchlist", userId],
+    queryFn: () => userId ? fetchWatchlist(userId) : [],
+    enabled: !!userId,
+  });
+
+  const removeFromWatchlist = async (watchlistId: string) => {
+    await removeWatchlistItem(watchlistId);
+    refetch();
   };
+
+  if (!userId) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
+        <h1 className="text-3xl font-bold text-white mb-4">My Watchlist</h1>
+        <p className="text-gray-400 mb-6">Please log in to view your watchlist</p>
+        <Link to="/login" className="btn-primary">Log In</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -46,12 +59,11 @@ function Watchlist() {
             : "Your watchlist is empty"}
         </p>
       </div>
-
       {items.length > 0 ? (
         <div className="space-y-3">
-          {items.map((anime) => (
+          {items.map((anime: any) => (
             <div
-              key={anime.id}
+              key={anime.watchlist_id}
               className="glass-card p-4 flex items-center gap-4 group"
             >
               {/* Poster */}
@@ -76,7 +88,6 @@ function Watchlist() {
                   )}
                 </div>
               </Link>
-
               {/* Info */}
               <Link
                 to="/anime/$id"
@@ -89,12 +100,11 @@ function Watchlist() {
                 <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
                   <span>{anime.rating}</span>
                   <span>•</span>
-                  <span>{anime.genre[0]}</span>
+                  <span>{anime.genre?.[0]}</span>
                   <span>•</span>
                   <span className="capitalize">{anime.type}</span>
                 </div>
               </Link>
-
               {/* Actions */}
               <div className="flex items-center gap-2 shrink-0">
                 <Link
@@ -105,7 +115,7 @@ function Watchlist() {
                   Watch
                 </Link>
                 <button
-                  onClick={() => removeFromWatchlist(anime.id)}
+                  onClick={() => removeFromWatchlist(anime.watchlist_id)}
                   className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                   title="Remove from watchlist"
                 >

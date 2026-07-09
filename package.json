@@ -8,9 +8,13 @@
     "build": "vite build",
     "start": "bun run serve.ts",
     "publish": "bash ./publish.sh",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "seed": "node seed.mjs",
+    "db:create": "node seed.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@tanstack/react-query": "^5.101.2",
     "@tanstack/react-router": "^1.158.1",
     "@tanstack/react-start": "^1.158.3",
     "react": "^19.2.4",

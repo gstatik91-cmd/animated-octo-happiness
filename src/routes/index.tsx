@@ -1,15 +1,39 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { animeList, getFeaturedAnime, getTrendingAnime, getRecentlyAdded } from "~/data/anime";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { AnimeCard } from "~/components/AnimeCard";
+import {
+  featuredAnime,
+  trendingAnime,
+  recentlyAddedAnime,
+  getAllAnime,
+} from "~/lib/api";
 
 export const Route = createFileRoute("/")({
   component: Home,
 });
 
 function Home() {
-  const featured = getFeaturedAnime();
-  const trending = getTrendingAnime();
-  const latest = getRecentlyAdded();
+  const { data: featured } = useSuspenseQuery({
+    queryKey: ["featuredAnime"],
+    queryFn: () => featuredAnime(),
+  });
+
+  const { data: trending } = useSuspenseQuery({
+    queryKey: ["trendingAnime"],
+    queryFn: () => trendingAnime(),
+  });
+
+  const { data: latest } = useSuspenseQuery({
+    queryKey: ["recentlyAdded"],
+    queryFn: () => recentlyAddedAnime(),
+  });
+
+  const { data: allAnime } = useSuspenseQuery({
+    queryKey: ["allAnime"],
+    queryFn: () => getAllAnime(),
+  });
+
+  const animeCount = allAnime?.length ?? 0;
 
   return (
     <div>
@@ -40,7 +64,7 @@ function Home() {
             <div className="fade-in">
               <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-anime-500/10 border border-anime-500/20 text-anime-300 text-sm font-medium mb-6">
                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                Now Streaming 25+ Series
+                Now Streaming {animeCount}+ Series
               </span>
             </div>
 
@@ -68,7 +92,7 @@ function Home() {
             {/* Stats */}
             <div className="flex flex-wrap gap-8 mt-12 slide-up" style={{ animationDelay: '0.3s' }}>
               <div>
-                <div className="text-2xl font-bold text-white">{animeList.length}+</div>
+                <div className="text-2xl font-bold text-white">{animeCount}+</div>
                 <div className="text-sm text-gray-500">Anime Series</div>
               </div>
               <div>
@@ -99,7 +123,7 @@ function Home() {
             </Link>
           </div>
           <div className="anime-grid">
-            {featured.map((anime, i) => (
+            {featured?.map((anime, i) => (
               <AnimeCard key={anime.id} anime={anime} index={i} />
             ))}
           </div>
@@ -120,7 +144,7 @@ function Home() {
           </Link>
         </div>
         <div className="anime-grid">
-          {trending.map((anime, i) => (
+          {trending?.map((anime, i) => (
             <AnimeCard key={anime.id} anime={anime} index={i} />
           ))}
         </div>
@@ -140,7 +164,7 @@ function Home() {
           </Link>
         </div>
         <div className="anime-grid">
-          {latest.map((anime, i) => (
+          {latest?.map((anime, i) => (
             <AnimeCard key={anime.id} anime={anime} index={i} />
           ))}
         </div>

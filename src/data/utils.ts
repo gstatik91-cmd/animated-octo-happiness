@@ -1,4 +1,17 @@
-import type { Anime } from "./anime";
+import type { AnimeRow } from "~/db";
+
+// DB rows use snake_case, legacy Anime type uses camelCase
+// This file normalizes both
+
+type AnimeLike = {
+  id: string;
+  title: string;
+  image?: string;
+  status?: string;
+  rating?: number;
+  genre?: string[];
+  type?: string;
+};
 
 const imageBase = "/thumbnails";
 const defaultPoster = "/logo.png";
@@ -14,7 +27,7 @@ const imageMap: Record<string, string> = {
   "solo-leveling": "solo-leveling",
 };
 
-export function getAnimeImagePath(anime: Anime): string {
+export function getAnimeImagePath(anime: AnimeLike): string {
   const key = imageMap[anime.id];
   if (key) {
     return `${imageBase}/${key}.jpg`;
@@ -22,7 +35,7 @@ export function getAnimeImagePath(anime: Anime): string {
   return defaultPoster;
 }
 
-export function getGradientForAnime(anime: Anime): string {
+export function getGradientForAnime(anime: AnimeLike): string {
   const gradients: Record<string, string> = {
     "attack-on-titan": "from-emerald-900 via-green-800 to-yellow-900",
     "demon-slayer": "from-blue-900 via-indigo-800 to-teal-900",
@@ -36,7 +49,7 @@ export function getGradientForAnime(anime: Anime): string {
   return gradients[anime.id] || "from-purple-900 via-violet-800 to-indigo-900";
 }
 
-export function getStatusColor(status: Anime["status"]): string {
+export function getStatusColor(status: string): string {
   switch (status) {
     case "airing":
       return "bg-green-500";
@@ -44,10 +57,12 @@ export function getStatusColor(status: Anime["status"]): string {
       return "bg-blue-500";
     case "upcoming":
       return "bg-yellow-500";
+    default:
+      return "bg-gray-500";
   }
 }
 
-export function getStatusLabel(status: Anime["status"]): string {
+export function getStatusLabel(status: string): string {
   switch (status) {
     case "airing":
       return "Airing";
@@ -55,5 +70,7 @@ export function getStatusLabel(status: Anime["status"]): string {
       return "Completed";
     case "upcoming":
       return "Upcoming";
+    default:
+      return status;
   }
 }
