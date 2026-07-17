@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { signUp } from "~/lib/api";
+import { apiSignUp } from "~/lib/api";
 
 export const Route = createFileRoute("/signup")({
   component: Signup,
@@ -12,15 +12,18 @@ function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
-      const result = await signUp({ name, email, password });
+      const result = await apiSignUp({ name, email, password });
       if (result.success && result.user) {
-        // Store session in localStorage
+        // Store JWT token and session in localStorage
+        localStorage.setItem("aniFlow_token", result.token);
         localStorage.setItem(
           "aniFlow_session",
           JSON.stringify({
@@ -36,6 +39,8 @@ function Signup() {
       }
     } catch (err) {
       setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -104,8 +109,12 @@ function Signup() {
             <p className="text-xs text-gray-600">
               By signing up, you agree to our Terms of Service and Privacy Policy.
             </p>
-            <button type="submit" className="btn-primary w-full">
-              Create Free Account
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Creating account..." : "Create Free Account"}
             </button>
           </form>
 

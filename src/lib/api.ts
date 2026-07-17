@@ -6,13 +6,11 @@ import {
   getFeaturedAnime,
   getTrendingAnime,
   getRecentlyAdded,
-  getUserByEmail,
-  createUser,
   getWatchlist,
   addToWatchlist,
   removeFromWatchlist,
 } from "~/db";
-import type { AnimeRow, EpisodeRow, UserRow } from "~/db";
+import { signUp, logIn, getMe } from "~/lib/auth";
 
 // --- Anime API ---
 
@@ -66,35 +64,22 @@ export const getAllAnime = createServerFn({ method: "GET" })
 
 // --- Auth API ---
 
-export const signUp = createServerFn({ method: "POST" })
+export const apiSignUp = createServerFn({ method: "POST" })
   .validator((data: { name: string; email: string; password: string }) => data)
   .handler(async ({ data }) => {
-    // Check if user exists
-    const existing = await getUserByEmail(data.email);
-    if (existing) {
-      return { success: false, error: "Email already registered" };
-    }
-
-    // Simple hashing for MVP (in production use bcrypt)
-    const hashedPassword = await simpleHash(data.password);
-    const user = await createUser(data.name, data.email, hashedPassword);
-    return { success: true, user: { id: user.id, name: user.name, email: user.email, isPremium: user.is_premium } };
+    return signUp(data.name, data.email, data.password);
   });
 
-export const logIn = createServerFn({ method: "POST" })
+export const apiLogIn = createServerFn({ method: "POST" })
   .validator((data: { email: string; password: string }) => data)
   .handler(async ({ data }) => {
-    const user = await getUserByEmail(data.email);
-    if (!user) {
-      return { success: false, error: "Invalid email or password" };
-    }
+    return logIn(data.email, data.password);
+  });
 
-    const match = await simpleVerify(data.password, user.password);
-    if (!match) {
-      return { success: false, error: "Invalid email or password" };
-    }
-
-    return { success: true, user: { id: user.id, name: user.name, email: user.email, isPremium: user.is_premium } };
+export const apiGetMe = createServerFn({ method: "GET" })
+  .validator((token: string) => token)
+  .handler(async ({ data: token }) => {
+    return getMe(token);
   });
 
 // --- Watchlist API ---
@@ -148,17 +133,3 @@ export const checkEpisodeAccess = createServerFn({ method: "GET" })
 
     return { allowed: true, reason: null };
   });
-
-// --- Helper: simple hash (MVP only — use bcrypt in production) ---
-async function simpleHash(password: string): Promise<string> {
-  // Prefix with a version marker so simpleVerify can differentiate
-  return `mvp_v1:${password}`;
-}
-
-async function simpleVerify(password: string, hash: string): Promise<boolean> {
-  if (hash.startsWith("mvp_v1:")) {
-    return hash === `mvp_v1:${password}`;
-  }
-  // If it looks like a bcrypt hash, just return false (can't verify without bcrypt)
-  return false;
-}

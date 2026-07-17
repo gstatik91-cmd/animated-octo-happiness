@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { logIn } from "~/lib/api";
+import { apiLogIn } from "~/lib/api";
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -11,15 +11,18 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
-      const result = await logIn({ email, password });
+      const result = await apiLogIn({ email, password });
       if (result.success && result.user) {
-        // Store session in localStorage
+        // Store JWT token and session in localStorage
+        localStorage.setItem("aniFlow_token", result.token);
         localStorage.setItem(
           "aniFlow_session",
           JSON.stringify({
@@ -35,6 +38,8 @@ function Login() {
       }
     } catch (err) {
       setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -85,8 +90,12 @@ function Login() {
                 placeholder="••••••••"
               />
             </div>
-            <button type="submit" className="btn-primary w-full">
-              Sign In
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 

@@ -1,16 +1,16 @@
-import { neon } from "@neondatabase/serverless";
+import pg from "pg";
 
-let _sql: ReturnType<typeof neon> | null = null;
+let _pool: pg.Pool | null = null;
 
-export function getDb() {
-  if (!_sql) {
+function getPool(): pg.Pool {
+  if (!_pool) {
     const url = process.env.DATABASE_URL;
     if (!url) {
       throw new Error("DATABASE_URL environment variable is not set");
     }
-    _sql = neon(url);
+    _pool = new pg.Pool({ connectionString: url });
   }
-  return _sql;
+  return _pool;
 }
 
 /**
@@ -18,18 +18,17 @@ export function getDb() {
  * Returns rows as an array of plain objects.
  */
 export async function query<T = Record<string, unknown>>(
-  strings: TemplateStringsArray | string,
+  text: string,
   ...params: unknown[]
 ): Promise<T[]> {
-  const sql = getDb();
-  if (typeof strings === "string") {
-    return sql(strings, ...params) as Promise<T[]>;
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    const result = await client.query(text, params);
+    return result.rows as T[];
+  } finally {
+    client.release();
   }
-  // Template literal tag form
-  const combined = strings.reduce((acc, str, i) => {
-    return acc + str + (i < params.length ? `$${i + 1}` : "");
-  }, "");
-  return sql(combined, ...params) as Promise<T[]>;
 }
 
 // Convenience helpers
@@ -66,7 +65,6 @@ export async function getAnimeList(filters?: {
     params.push(filters.type);
   }
 
-  // Sort
   const sort = filters?.sortBy || "rating";
   if (sort === "rating") sqlStr += " ORDER BY rating DESC";
   else if (sort === "year") sqlStr += " ORDER BY year DESC";
@@ -77,10 +75,7 @@ export async function getAnimeList(filters?: {
 }
 
 export async function getAnimeById(id: string) {
-  const rows = await query<AnimeRow>(
-    `SELECT * FROM anime WHERE id = $1`,
-    id
-  );
+  const rows = await query<AnimeRow>(`SELECT * FROM anime WHERE id = $1`, id);
   return rows[0] || null;
 }
 
@@ -104,30 +99,26 @@ export async function getEpisode(animeId: string, episodeNumber: number) {
 }
 
 export async function getFeaturedAnime() {
-  return query<AnimeRow>(
-    `SELECT * FROM anime WHERE rating >= 9.0 ORDER BY rating DESC`
-  );
+  return query<AnimeRow>(`SELECT * FROM anime WHERE rating >= 9.0 ORDER BY rating DESC`);
 }
 
 export async function getTrendingAnime() {
-  return query<AnimeRow>(
-    `SELECT * FROM anime ORDER BY rating DESC LIMIT 8`
-  );
+  return query<AnimeRow>(`SELECT * FROM anime ORDER BY rating DESC LIMIT 8`);
 }
 
 export async function getRecentlyAdded() {
-  return query<AnimeRow>(
-    `SELECT * FROM anime ORDER BY year DESC LIMIT 8`
-  );
+  return query<AnimeRow>(`SELECT * FROM anime ORDER BY year DESC LIMIT 8`);
 }
 
 // User functions
 
 export async function getUserByEmail(email: string) {
-  const rows = await query<UserRow>(
-    `SELECT * FROM users WHERE email = $1`,
-    email
-  );
+  const rows = await query<UserRow>(`SELECT * FROM users WHERE email = $1`, email);
+  return rows[0] || null;
+}
+
+export async function getUserById(id: string) {
+  const rows = await query<UserRow>(`SELECT * FROM users WHERE id = $1`, id);
   return rows[0] || null;
 }
 
@@ -164,10 +155,7 @@ export async function addToWatchlist(userId: string, animeId: string) {
 }
 
 export async function removeFromWatchlist(watchlistId: string) {
-  await query(
-    `DELETE FROM watchlists WHERE id = $1`,
-    watchlistId
-  );
+  await query(`DELETE FROM watchlists WHERE id = $1`, watchlistId);
 }
 
 // Types
