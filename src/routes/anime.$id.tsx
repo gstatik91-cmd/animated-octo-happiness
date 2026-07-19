@@ -1,19 +1,27 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useState } from "react";
-import { getAnimeById } from "~/data/anime";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { getAnime } from "~/lib/api";
 import { getGradientForAnime, getStatusColor, getStatusLabel } from "~/data/utils";
 
 export const Route = createFileRoute("/anime/$id")({
-  loader: ({ params }) => {
-    const anime = getAnimeById(params.id);
-    if (!anime) throw notFound();
-    return anime;
-  },
+  loader: ({ params }) => params.id,
   component: AnimeDetail,
 });
 
 function AnimeDetail() {
-  const anime = Route.useLoaderData();
+  const animeId = Route.useLoaderData();
+
+  const { data: result } = useSuspenseQuery({
+    queryKey: ["anime", animeId],
+    queryFn: () => getAnime(animeId),
+  });
+
+  if (!result) throw notFound();
+
+  const anime = result;
+  const episodes = (anime as any).episodes || [];
+  
   const [audioType, setAudioType] = useState<"sub" | "dub">(
     anime.type === "dub" ? "dub" : "sub"
   );
@@ -24,7 +32,7 @@ function AnimeDetail() {
       <section className="relative min-h-[60vh] flex items-end overflow-hidden">
         <div className="absolute inset-0">
           <img src={anime.banner} alt="" className="w-full h-full object-cover opacity-30" />
-          <div className={`absolute inset-0 bg-gradient-to-b ${getGradientForAnime(anime)} opacity-60`} />
+          <div className={`absolute inset-0 bg-gradient-to-b ${getGradientForAnime(anime as any)} opacity-60`} />
           <div className="absolute inset-0 bg-gradient-to-t from-anime-dark via-anime-dark/60 to-transparent" />
         </div>
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
@@ -34,7 +42,7 @@ function AnimeDetail() {
                 {anime.image ? (
                   <img src={anime.image} alt={anime.title} className="w-full h-full object-cover" />
                 ) : (
-                  <div className={`w-full h-full bg-gradient-to-br ${getGradientForAnime(anime)} flex items-center justify-center p-4`}>
+                  <div className={`w-full h-full bg-gradient-to-br ${getGradientForAnime(anime as any)} flex items-center justify-center p-4`}>
                     <span className="text-center text-white/80 font-bold">{anime.title}</span>
                   </div>
                 )}
@@ -50,9 +58,9 @@ function AnimeDetail() {
                 <span className="text-sm text-gray-400">{anime.studio}</span>
               </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white mb-2">{anime.title}</h1>
-              {anime.titleJapanese && <p className="text-lg text-gray-500 mb-4">{anime.titleJapanese}</p>}
+              {anime.title_japanese && <p className="text-lg text-gray-500 mb-4">{anime.title_japanese}</p>}
               <div className="flex flex-wrap gap-2 mb-4">
-                {anime.genre.map((g) => (
+                {anime.genre.map((g: string) => (
                   <Link key={g} to="/browse" className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-gray-300 hover:bg-anime-500/20 hover:border-anime-500/30 transition-colors">{g}</Link>
                 ))}
               </div>
@@ -65,7 +73,7 @@ function AnimeDetail() {
                   <span className="text-sm text-gray-500">/ 10</span>
                 </div>
                 <span className="text-gray-600">|</span>
-                <span className="text-sm text-gray-400">{anime.totalEpisodes} {anime.totalEpisodes > 1 ? "Episodes" : "Film"}</span>
+                <span className="text-sm text-gray-400">{anime.total_episodes} {anime.total_episodes > 1 ? "Episodes" : "Film"}</span>
                 <span className="text-gray-600">|</span>
                 <span className="text-sm text-gray-400">{anime.duration}</span>
               </div>
@@ -89,7 +97,6 @@ function AnimeDetail() {
           </div>
         </div>
       </section>
-
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid md:grid-cols-3 gap-8">
           <div className="md:col-span-2">
@@ -103,7 +110,7 @@ function AnimeDetail() {
                 ["Studio", anime.studio],
                 ["Year", String(anime.year)],
                 ["Status", getStatusLabel(anime.status)],
-                ["Episodes", String(anime.totalEpisodes)],
+                ["Episodes", String(anime.total_episodes)],
                 ["Duration", anime.duration],
                 ["Audio", anime.type === "both" ? "Sub & Dub" : anime.type],
               ].map(([label, value]) => (
@@ -115,11 +122,10 @@ function AnimeDetail() {
             </div>
           </div>
         </div>
-
         <div className="mt-12">
           <h2 className="text-xl font-bold text-white mb-6">Episodes</h2>
           <div className="space-y-2">
-            {anime.episodes.map((ep) => (
+            {episodes.map((ep: any) => (
               <Link key={ep.id} to="/watch/$animeId/$episode" params={{ animeId: anime.id, episode: String(ep.number) }}
                 className="flex items-center gap-4 p-4 rounded-lg bg-surface border border-white/5 hover:bg-surface-light transition-colors group">
                 <div className="w-10 h-10 rounded-lg bg-surface-lighter flex items-center justify-center shrink-0 group-hover:bg-anime-500/20 transition-colors">

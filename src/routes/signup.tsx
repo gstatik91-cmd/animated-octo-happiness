@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { apiSignUp } from "~/lib/api";
 
 export const Route = createFileRoute("/signup")({
   component: Signup,
@@ -10,19 +11,37 @@ function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // MVP: Simple localStorage-based auth simulation
-    const users = JSON.parse(localStorage.getItem("aniFlow_users") || "{}");
-    if (users[email]) {
-      alert("An account with this email already exists");
-      return;
+    setError("");
+    setLoading(true);
+
+    try {
+      const result = await apiSignUp({ name, email, password });
+      if (result.success && result.user) {
+        // Store JWT token and session in localStorage
+        localStorage.setItem("aniFlow_token", result.token);
+        localStorage.setItem(
+          "aniFlow_session",
+          JSON.stringify({
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            isPremium: result.user.isPremium,
+          })
+        );
+        navigate({ to: "/" });
+      } else {
+        setError(result.error || "An error occurred during signup");
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    users[email] = { name, password };
-    localStorage.setItem("aniFlow_users", JSON.stringify(users));
-    localStorage.setItem("aniFlow_session", JSON.stringify({ email, name }));
-    navigate({ to: "/" });
   };
 
   return (
@@ -39,6 +58,11 @@ function Signup() {
 
         <div className="glass-card p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                {error}
+              </div>
+            )}
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1.5">
                 Name
@@ -85,8 +109,12 @@ function Signup() {
             <p className="text-xs text-gray-600">
               By signing up, you agree to our Terms of Service and Privacy Policy.
             </p>
-            <button type="submit" className="btn-primary w-full">
-              Create Free Account
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Creating account..." : "Create Free Account"}
             </button>
           </form>
 
@@ -98,17 +126,17 @@ function Signup() {
               </Link>
             </p>
           </div>
-        </div>
 
-        {/* Free Tier Notice */}
-        <div className="mt-6 glass-card p-4 flex items-start gap-3">
-          <svg className="w-5 h-5 text-green-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-xs text-gray-500">
-            Free account includes ad-supported streaming, standard quality, and limited simulcast delay. 
-            <Link to="/pricing" className="text-anime-400 hover:text-anime-300 ml-1">Upgrade to Premium</Link> for ad-free, HD/4K, early access, and offline downloads.
-          </p>
+          {/* Free Tier Notice */}
+          <div className="mt-6 glass-card p-4 flex items-start gap-3">
+            <svg className="w-5 h-5 text-green-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-xs text-gray-500">
+              Free account includes ad-supported streaming, standard quality, and limited simulcast delay. 
+              <Link to="/pricing" className="text-anime-400 hover:text-anime-300 ml-1">Upgrade to Premium</Link> for ad-free, HD/4K, early access, and offline downloads.
+            </p>
+          </div>
         </div>
       </div>
     </div>
