@@ -1,8 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { animeList, genres } from "~/data/anime";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { listAnime } from "~/lib/api";
 import { AnimeCard } from "~/components/AnimeCard";
-import type { Anime } from "~/data/anime";
+
+const genres = [
+  "Action", "Adventure", "Comedy", "Drama", "Fantasy", 
+  "Horror", "Mecha", "Mystery", "Psychological", "Romance",
+  "School", "Sci-Fi", "Slice of Life", "Superhero", "Supernatural",
+  "Thriller", "War"
+];
 
 export const Route = createFileRoute("/browse")({
   component: Browse,
@@ -15,20 +22,27 @@ function Browse() {
   const [selectedType, setSelectedType] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("rating");
 
-  const filtered = animeList
-    .filter((a) => {
+  const { data: allAnime } = useSuspenseQuery({
+    queryKey: ["allAnime"],
+    queryFn: () => listAnime({}),
+  });
+
+  const filtered = (allAnime || [])
+    .filter((a: any) => {
       if (search && !a.title.toLowerCase().includes(search.toLowerCase())) return false;
       if (selectedGenre && !a.genre.includes(selectedGenre)) return false;
       if (selectedStatus && a.status !== selectedStatus) return false;
       if (selectedType && a.type !== selectedType && !(selectedType === "both" && a.type === "both")) return false;
       return true;
     })
-    .sort((a, b) => {
+    .sort((a: any, b: any) => {
       if (sortBy === "rating") return b.rating - a.rating;
       if (sortBy === "year") return b.year - a.year;
       if (sortBy === "title") return a.title.localeCompare(b.title);
       return 0;
     });
+
+  const totalCount = allAnime?.length ?? 0;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -108,14 +122,14 @@ function Browse() {
       {/* Results Count */}
       <div className="mb-6">
         <span className="text-sm text-gray-500">
-          Showing {filtered.length} of {animeList.length} titles
+          Showing {filtered.length} of {totalCount} titles
         </span>
       </div>
 
       {/* Grid */}
       {filtered.length > 0 ? (
         <div className="anime-grid">
-          {filtered.map((anime, i) => (
+          {filtered.map((anime: any, i: number) => (
             <AnimeCard key={anime.id} anime={anime} index={i} />
           ))}
         </div>
