@@ -10,7 +10,18 @@ import {
   addToWatchlist,
   removeFromWatchlist,
 } from "~/db";
+import {
+  getPersonalizedRecommendations,
+} from "~/db";
 import { signUp, logIn, getMe } from "~/lib/auth";
+
+// --- Recommendations API ---
+
+export const apiGetRecommendations = createServerFn({ method: "GET" })
+  .validator((userId: string) => userId)
+  .handler(async ({ data: userId }) => {
+    return getPersonalizedRecommendations(userId);
+  });
 
 // --- Anime API ---
 

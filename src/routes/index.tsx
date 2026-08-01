@@ -1,12 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { AnimeCard } from "~/components/AnimeCard";
 import {
   featuredAnime,
   trendingAnime,
   recentlyAddedAnime,
   getAllAnime,
+  apiGetRecommendations,
 } from "~/lib/api";
+
+// For MVP, we use a simple user ID from localStorage
+function getUserId(): string | null {
+  try {
+    const session = JSON.parse(localStorage.getItem("aniFlow_session") || "null");
+    return session?.id || null;
+  } catch {
+    return null;
+  }
+}
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -31,6 +43,20 @@ function Home() {
   const { data: allAnime } = useSuspenseQuery({
     queryKey: ["allAnime"],
     queryFn: () => getAllAnime(),
+  });
+
+  // Recommendations: fetch when user is logged in
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = getUserId();
+    setUserId(id);
+  }, []);
+
+  const { data: recommendations } = useQuery({
+    queryKey: ["recommendations", userId],
+    queryFn: () => (userId ? apiGetRecommendations(userId) : null),
+    enabled: !!userId,
   });
 
   const animeCount = allAnime?.length ?? 0;
@@ -169,6 +195,31 @@ function Home() {
           ))}
         </div>
       </section>
+
+      {/* Personalized Recommendations — only shown for logged-in users with watchlist */}
+      {recommendations && recommendations.items && recommendations.items.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <svg className="w-5 h-5 text-pink-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+              </svg>
+              Because you watched{" "}
+              <Link to={`/anime/${recommendations.becauseYouWatched?.id}`} className="text-anime-400 hover:text-anime-300 transition-colors underline">
+                {recommendations.becauseYouWatched?.title}
+              </Link>
+            </h2>
+            <Link to="/browse" className="text-sm text-anime-400 hover:text-anime-300 transition-colors">
+              View All →
+            </Link>
+          </div>
+          <div className="anime-grid">
+            {recommendations.items.map((anime: any, i: number) => (
+              <AnimeCard key={anime.id} anime={anime} index={i} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Features Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-24">

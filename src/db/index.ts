@@ -158,6 +158,55 @@ export async function removeFromWatchlist(watchlistId: string) {
   await query(`DELETE FROM watchlists WHERE id = $1`, watchlistId);
 }
 
+// Recommendations: find similar anime based on shared genres from watchlist
+export async function getPersonalizedRecommendations(userId: string, limit = 8) {
+  // Get IDs of anime already in user's watchlist
+  const watchlistRows = await query<{ anime_id: string }>(
+    `SELECT anime_id FROM watchlists WHERE user_id = $1`,
+    userId
+  );
+  const watchedIds = watchlistRows.map((r) => r.anime_id);
+  if (watchedIds.length === 0) return [];
+
+  // Get genres from all watched anime
+  const watchedAnime = await query<Pick<AnimeRow, "genre" | "id" | "title">>(
+    `SELECT id, title, genre FROM anime WHERE id = ANY($1)`,
+    watchedIds
+  );
+
+  // Collect all unique genres and find the most-watched anime for the "because you watched" highlight
+  const genreSet = new Set<string>();
+  let bestAnime: { id: string; title: string } | null = null;
+  for (const a of watchedAnime) {
+    for (const g of a.genre) genreSet.add(g);
+    // Pick the first anime as the "because you watched" anchor
+    if (!bestAnime) bestAnime = { id: a.id, title: a.title };
+  }
+
+  const allGenres = Array.from(genreSet);
+  if (allGenres.length === 0) return [];
+
+  // Find anime with overlapping genres that aren't in the watchlist
+  const excludeIds = [...watchedIds];
+
+  // Build a query that ranks by genre overlap count
+  const rows = await query<AnimeRow & { match_count: number }>(
+    `SELECT a.*, (
+       SELECT COUNT(*) FROM unnest(a.genre) AS g WHERE g = ANY($2)
+     ) as match_count
+     FROM anime a
+     WHERE a.id != ALL($1)
+     AND a.genre && $2
+     ORDER BY match_count DESC, a.rating DESC
+     LIMIT $3`,
+    excludeIds,
+    allGenres,
+    limit
+  );
+
+  return { items: rows, becauseYouWatched: bestAnime };
+}
+
 // Types
 
 export interface AnimeRow {
