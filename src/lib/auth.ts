@@ -113,6 +113,7 @@ export async function getMe(token: string) {
       email: user.email,
       name: user.name,
       isPremium: user.is_premium,
+      createdAt: user.created_at,
     },
   };
 }

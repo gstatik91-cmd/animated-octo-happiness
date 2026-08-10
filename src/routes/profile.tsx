@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchWatchlist } from "~/lib/api";
+import { fetchWatchlist, apiGetMe } from "~/lib/api";
 
 export const Route = createFileRoute("/profile")({
   component: Profile,
@@ -12,29 +12,66 @@ interface Session {
   email: string;
   name: string;
   isPremium: boolean;
+  createdAt?: string;
 }
 
 function Profile() {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [verified, setVerified] = useState(false);
 
   useEffect(() => {
+    const token = localStorage.getItem("aniFlow_token");
     const stored = localStorage.getItem("aniFlow_session");
+
+    // No token — redirect to login immediately
+    if (!token) {
+      navigate({ to: "/login" });
+      return;
+    }
+
+    // Verify session via apiGetMe
+    apiGetMe(token).then((result) => {
+      if (result.success && result.user) {
+        const userData: Session = {
+          id: result.user.id,
+          email: result.user.email,
+          name: result.user.name,
+          isPremium: result.user.isPremium,
+          createdAt: (result.user as any).createdAt,
+        };
+        setSession(userData);
+        // Update localStorage with verified data
+        localStorage.setItem("aniFlow_session", JSON.stringify(userData));
+        setVerified(true);
+      } else {
+        // Invalid/expired token — clear and redirect
+        localStorage.removeItem("aniFlow_token");
+        localStorage.removeItem("aniFlow_session");
+        navigate({ to: "/login" });
+      }
+      setLoading(false);
+    }).catch(() => {
+      localStorage.removeItem("aniFlow_token");
+      localStorage.removeItem("aniFlow_session");
+      navigate({ to: "/login" });
+    });
+
+    // Also set initial session from localStorage for fast first render
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
         setSession(parsed);
       } catch {}
     }
-    setLoading(false);
   }, []);
 
-  // Fetch watchlist count
+  // Fetch watchlist count (only after session verified)
   const { data: watchlist } = useQuery({
     queryKey: ["watchlist", session?.id],
     queryFn: () => fetchWatchlist(session!.id),
-    enabled: !!session?.id,
+    enabled: !!session?.id && verified,
   });
 
   const watchlistCount = watchlist?.length ?? 0;
@@ -45,7 +82,7 @@ function Profile() {
     navigate({ to: "/" });
   };
 
-  // Loading state
+  // Loading state while verifying
   if (loading) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center bg-black">
@@ -54,25 +91,9 @@ function Profile() {
     );
   }
 
-  // Not logged in — show sign-in prompt
+  // Should never happen (we redirect), but safety fallback
   if (!session) {
-    return (
-      <div className="min-h-[80vh] flex items-center justify-center px-4 bg-black">
-        <div className="text-center max-w-md">
-          <div className="w-20 h-20 rounded-full bg-surface-lighter border border-white/10 flex items-center justify-center mx-auto mb-6">
-            <svg className="w-10 h-10 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Sign in to view your profile</h1>
-          <p className="text-gray-400 mb-6">Track your watchlist, manage your subscription, and more.</p>
-          <div className="flex gap-3 justify-center">
-            <Link to="/login" className="btn-primary !px-6 !py-3">Sign In</Link>
-            <Link to="/signup" className="btn-secondary !px-6 !py-3">Create Account</Link>
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -322,7 +343,11 @@ function Profile() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Member Since</p>
-                  <p className="text-sm text-white font-medium">—</p>
+                  <p className="text-sm text-white font-medium">
+                    {session.createdAt
+                      ? new Date(session.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+                      : "—"}
+                  </p>
                 </div>
               </div>
             </div>
