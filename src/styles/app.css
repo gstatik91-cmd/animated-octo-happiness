@@ -115,3 +115,80 @@
     animation: shimmer 2s infinite;
   }
 }
+/* ── Plyr media player — AniFlow dark anime theme ─────────────── */
+.plyr {
+  --plyr-color-main: #8c1aff;
+  --plyr-video-background: #000;
+  --plyr-menu-background: rgba(20, 20, 28, 0.96);
+  --plyr-menu-color: #e5e7eb;
+  --plyr-menu-arrow-color: #9ca3af;
+  --plyr-menu-radius: 10px;
+  --plyr-control-radius: 8px;
+  --plyr-control-icon-size: 18px;
+  --plyr-range-thumb-height: 13px;
+  --plyr-range-thumb-width: 13px;
+  --plyr-range-fill-background: #8c1aff;
+  --plyr-range-thumb-background: #fff;
+  --plyr-range-thumb-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --plyr-font-family: inherit;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.plyr--video .plyr__controls {
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+  padding: 20px 12px 12px;
+}
+.plyr__control {
+  color: #e5e7eb;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.plyr__control:hover {
+  background: rgba(140, 26, 255, 0.25);
+  color: #fff;
+}
+.plyr__control--overlaid {
+  background: rgba(140, 26, 255, 0.9);
+  box-shadow: 0 4px 24px rgba(140, 26, 255, 0.4);
+  width: 72px;
+  height: 72px;
+  border-radius: 9999px;
+}
+.plyr__control--overlaid:hover {
+  background: #7300e6;
+}
+.plyr__control--overlaid svg {
+  width: 28px;
+  height: 28px;
+  margin-left: 3px;
+}
+.plyr__menu__container {
+  background: var(--plyr-menu-background);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--plyr-menu-radius);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+.plyr__menu__container .plyr__control {
+  border-radius: 8px;
+}
+.plyr__badge {
+  background: #8c1aff;
+}
+.plyr__progress input[type="range"],
+.plyr__volume input[type="range"] {
+  color: #8c1aff;
+}
+.plyr--full-ui input[type="range"] {
+  cursor: pointer;
+}
+.plyr__time {
+  color: #d1d5db;
+}
+.plyr__tooltip {
+  background: rgba(20, 20, 28, 0.96);
+  color: #fff;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+.plyr__tooltip::before {
+  border-top-color: rgba(20, 20, 28, 0.96);
+}
