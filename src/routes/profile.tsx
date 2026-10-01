@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchWatchlist, apiGetMe } from "~/lib/api";
+import { buildAniListAuthorizeUrl, isAniListConfigured } from "~/lib/anilist";
 
 export const Route = createFileRoute("/profile")({
   component: Profile,
@@ -20,6 +21,40 @@ function Profile() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [verified, setVerified] = useState(false);
+  const [anilistUser, setAnilistUser] = useState<{ id: number; name: string; avatar?: string } | null>(null);
+  const [autoSync, setAutoSync] = useState(true);
+
+  // Load AniList connection state + auto-sync preference from localStorage
+  useEffect(() => {
+    const raw = localStorage.getItem("aniflow_anilist_user");
+    if (raw) {
+      try {
+        setAnilistUser(JSON.parse(raw));
+      } catch {}
+    }
+    const sync = localStorage.getItem("aniflow_anilist_autosync");
+    if (sync !== null) setAutoSync(sync !== "false");
+  }, []);
+
+  function connectAniList() {
+    if (!isAniListConfigured()) {
+      alert("AniList connection is being configured — check back soon.");
+      return;
+    }
+    window.location.href = buildAniListAuthorizeUrl();
+  }
+
+  function disconnectAniList() {
+    localStorage.removeItem("aniflow_anilist_token");
+    localStorage.removeItem("aniflow_anilist_user");
+    setAnilistUser(null);
+  }
+
+  function toggleAutoSync() {
+    const next = !autoSync;
+    setAutoSync(next);
+    localStorage.setItem("aniflow_anilist_autosync", String(next));
+  }
 
   useEffect(() => {
     const token = localStorage.getItem("aniFlow_token");
@@ -350,6 +385,54 @@ function Profile() {
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* AniList Connection */}
+            <div className="glass-card p-6">
+              <h2 className="text-lg font-bold text-white mb-4">AniList</h2>
+              {anilistUser ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    {anilistUser.avatar ? (
+                      <img src={anilistUser.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-anime-500/20 flex items-center justify-center text-anime-400 font-bold">
+                        {anilistUser.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm text-white font-medium">Connected as {anilistUser.name} ✓</p>
+                      <p className="text-xs text-gray-500">Watch progress syncs to your list</p>
+                    </div>
+                  </div>
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <span className="text-sm text-gray-300">Auto-sync watch progress</span>
+                    <button
+                      onClick={toggleAutoSync}
+                      className={`relative w-10 h-6 rounded-full transition-colors ${autoSync ? "bg-anime-500" : "bg-gray-700"}`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${autoSync ? "translate-x-4" : ""}`}
+                      />
+                    </button>
+                  </label>
+                  <button
+                    onClick={disconnectAniList}
+                    className="text-sm text-gray-500 hover:text-red-400 transition-colors"
+                  >
+                    Disconnect AniList
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Link your AniList account to sync watch progress automatically.
+                  </p>
+                  <button onClick={connectAniList} className="btn-primary !px-4 !py-2 w-full">
+                    Connect AniList
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Continue Watching Placeholder */}

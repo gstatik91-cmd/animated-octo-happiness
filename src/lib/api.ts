@@ -133,3 +133,59 @@ export const checkEpisodeAccess = createServerFn({ method: "GET" })
 
     return { allowed: true, reason: null };
   });
+
+// --- AniList OAuth token exchange (server-side only) ---
+// The AniList client secret lives in the server environment and must never
+// ship to the browser. This server function exchanges an authorization code
+// for an access token using that secret.
+
+export const exchangeAnilistCode = createServerFn({ method: "POST" })
+  .validator((data: { code: string }) => data)
+  .handler(async ({ data }) => {
+    const clientId = process.env.ANILIST_CLIENT_ID;
+    const clientSecret = process.env.ANILIST_CLIENT_SECRET;
+    const redirectUri =
+      process.env.ANILIST_REDIRECT_URI ||
+      "https://1c82ccfad8a7cab709fa37ade0f5d2f5.ctonew.app/auth/anilist/callback";
+
+    if (!clientId || !clientSecret) {
+      return { success: false as const, error: "AniList is not configured" };
+    }
+
+    try {
+      const res = await fetch("https://anilist.co/api/v2/oauth/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          grant_type: "authorization_code",
+          client_id: clientId,
+          client_secret: clientSecret,
+          redirect_uri: redirectUri,
+          code: data.code,
+        }),
+      });
+
+      if (!res.ok) {
+        return { success: false as const, error: `Token exchange failed (${res.status})` };
+      }
+
+      const json = (await res.json()) as {
+        access_token?: string;
+        token_type?: string;
+        expires_in?: number;
+      };
+
+      if (!json.access_token) {
+        return { success: false as const, error: "No access token returned" };
+      }
+
+      return {
+        success: true as const,
+        accessToken: json.access_token,
+        tokenType: json.token_type ?? "Bearer",
+        expiresIn: json.expires_in ?? null,
+      };
+    } catch (e) {
+      return { success: false as const, error: e instanceof Error ? e.message : "Unknown error" };
+    }
+  });
