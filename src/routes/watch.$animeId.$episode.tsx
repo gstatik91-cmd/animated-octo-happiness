@@ -2,6 +2,7 @@ import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-ro
 import { useState, useEffect, useCallback } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getAnime, checkEpisodeAccess } from "~/lib/api";
+import { searchMedia, saveMediaListEntry } from "~/lib/anilist";
 import { getGradientForAnime } from "~/data/utils";
 import { VideoPlayer } from "~/components/VideoPlayer";
 import {
@@ -59,6 +60,39 @@ function WatchPage() {
   }, []);
 
   const isPremium = session?.isPremium ?? false;
+
+  // AniList scrobbling: when a connected user watches an episode and
+  // auto-sync is enabled, sync watch progress to their AniList list.
+  useEffect(() => {
+    const token = localStorage.getItem("aniflow_anilist_token");
+    const autosync = localStorage.getItem("aniflow_anilist_autosync");
+    if (!token || autosync === "false") return;
+    const title = (anime as any).title || "";
+    if (!title) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        // Prefer a cached anilistId; otherwise match by title.
+        const cacheKey = `aniflow_anilist_id:${animeId}`;
+        let mediaId = Number(localStorage.getItem(cacheKey)) || 0;
+        if (!mediaId) {
+          const media = await searchMedia(title);
+          if (!media) return;
+          mediaId = media.id;
+          localStorage.setItem(cacheKey, String(mediaId));
+        }
+        if (!cancelled) {
+          await saveMediaListEntry(token, { mediaId, status: "CURRENT", progress: episodeNumber });
+        }
+      } catch {
+        // Scrobble failures are silent — never break playback over tracking.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animeId, episodeNumber]);
   const { data: access } = useSuspenseQuery({
     queryKey: ["episode-access", animeId, episodeNumber, isPremium],
     queryFn: () => checkEpisodeAccess({ animeId, episodeNumber, isPremium }),
