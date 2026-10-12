@@ -27,28 +27,17 @@ export interface AniListMedia {
   coverImage?: { large?: string };
 }
 
-function clientId(): string {
-  return process.env.ANILIST_CLIENT_ID || "";
-}
-
-function redirectUri(): string {
-  return (
-    process.env.ANILIST_REDIRECT_URI ||
-    "https://1c82ccfad8a7cab709fa37ade0f5d2f5.ctonew.app/auth/anilist/callback"
-  );
-}
-
-/** True when the required client config is present. */
-export function isAniListConfigured(): boolean {
-  return clientId().length > 0;
-}
-
-/** Build the OAuth authorize URL the user is redirected to. */
-export function buildAniListAuthorizeUrl(): string {
+/**
+ * Build the OAuth authorize URL the user is redirected to. The client id and
+ * redirect URI are PUBLIC values fetched from the server (via
+ * `getAniListPublicConfig`), because `process.env` is not available in the
+ * browser bundle.
+ */
+export function buildAniListAuthorizeUrl(clientId: string, redirectUri: string): string {
   const params = new URLSearchParams({
-    client_id: clientId(),
+    client_id: clientId,
     response_type: "code",
-    redirect_uri: redirectUri(),
+    redirect_uri: redirectUri,
   });
   return `${ANILIST_AUTHORIZE}?${params.toString()}`;
 }
