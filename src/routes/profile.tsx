@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchWatchlist, apiGetMe } from "~/lib/api";
-import { buildAniListAuthorizeUrl, isAniListConfigured } from "~/lib/anilist";
+import { fetchWatchlist, apiGetMe, getAniListPublicConfig } from "~/lib/api";
+import { buildAniListAuthorizeUrl } from "~/lib/anilist";
 
 export const Route = createFileRoute("/profile")({
   component: Profile,
@@ -36,12 +36,13 @@ function Profile() {
     if (sync !== null) setAutoSync(sync !== "false");
   }, []);
 
-  function connectAniList() {
-    if (!isAniListConfigured()) {
+  async function connectAniList() {
+    const cfg = await getAniListPublicConfig();
+    if (!cfg.configured) {
       alert("AniList connection is being configured — check back soon.");
       return;
     }
-    window.location.href = buildAniListAuthorizeUrl();
+    window.location.href = buildAniListAuthorizeUrl(cfg.clientId, cfg.redirectUri);
   }
 
   function disconnectAniList() {

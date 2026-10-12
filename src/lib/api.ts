@@ -134,6 +134,18 @@ export const checkEpisodeAccess = createServerFn({ method: "GET" })
     return { allowed: true, reason: null };
   });
 
+// --- AniList public OAuth config (server-side only) ---
+// The client id and redirect URI are public, but `process.env` is not present
+// in the browser bundle, so the client fetches them here at runtime.
+export const getAniListPublicConfig = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const clientId = process.env.ANILIST_CLIENT_ID || "";
+    const redirectUri =
+      process.env.ANILIST_REDIRECT_URI ||
+      "https://1c82ccfad8a7cab709fa37ade0f5d2f5.ctonew.app/auth/anilist/callback";
+    return { clientId, redirectUri, configured: clientId.length > 0 };
+  });
+
 // --- AniList OAuth token exchange (server-side only) ---
 // The AniList client secret lives in the server environment and must never
 // ship to the browser. This server function exchanges an authorization code
