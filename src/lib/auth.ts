@@ -3,7 +3,10 @@ import jwt from "jsonwebtoken";
 import { getUserByEmail, getUserById, createUser } from "~/db";
 import type { UserRow } from "~/db";
 
-const JWT_SECRET = process.env.JWT_SECRET || "aniflow-dev-secret-key-change-in-production";
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET is not configured — set it in the .env file before starting the server.");
+}
 const JWT_EXPIRES_IN = "7d";
 
 // --- Password Hashing ---
@@ -13,10 +16,6 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  // Support both bcrypt hashes and the legacy mvp_v1 format
-  if (hash.startsWith("mvp_v1:")) {
-    return hash === `mvp_v1:${password}`;
-  }
   return bcrypt.compare(password, hash);
 }
 
