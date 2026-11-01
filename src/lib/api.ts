@@ -10,7 +10,7 @@ import {
   addToWatchlist,
   removeFromWatchlist,
 } from "~/db";
-import { signUp, logIn, getMe } from "~/lib/auth";
+import { signUp, logIn, getMe, verifyToken } from "~/lib/auth";
 
 // --- Anime API ---
 
@@ -106,9 +106,11 @@ export const removeWatchlistItem = createServerFn({ method: "POST" })
 // --- Simulcast check (1-week delay for free users) ---
 
 export const checkEpisodeAccess = createServerFn({ method: "GET" })
-  .validator((data: { animeId: string; episodeNumber: number; isPremium: boolean }) => data)
+  .validator((data: { animeId: string; episodeNumber: number; token?: string }) => data)
   .handler(async ({ data }) => {
-    if (data.isPremium) {
+    // Premium status must come from the server-verified JWT, never the client.
+    const isPremium = data.token ? (verifyToken(data.token)?.isPremium ?? false) : false;
+    if (isPremium) {
       return { allowed: true, reason: null };
     }
 

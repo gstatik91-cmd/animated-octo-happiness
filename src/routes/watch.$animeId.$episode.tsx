@@ -35,12 +35,6 @@ function WatchPage() {
   const [audioType, setAudioType] = useState<"sub" | "dub">(
     (anime as any).type === "dub" ? "dub" : "sub"
   );
-  const [session, setSession] = useState<{
-    email: string;
-    name: string;
-    id: string;
-    isPremium: boolean;
-  } | null>(null);
 
   // Streams resolved from the addon system.
   const [streams, setStreams] = useState<Stream[]>([]);
@@ -50,16 +44,7 @@ function WatchPage() {
   const [addonsOpen, setAddonsOpen] = useState(false);
   const [addons, setAddons] = useState<Addon[]>([]);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("aniFlow_session");
-    if (stored) {
-      try {
-        setSession(JSON.parse(stored));
-      } catch {}
-    }
-  }, []);
 
-  const isPremium = session?.isPremium ?? false;
 
   // AniList scrobbling: when a connected user watches an episode and
   // auto-sync is enabled, sync watch progress to their AniList list.
@@ -94,8 +79,13 @@ function WatchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animeId, episodeNumber]);
   const { data: access } = useSuspenseQuery({
-    queryKey: ["episode-access", animeId, episodeNumber, isPremium],
-    queryFn: () => checkEpisodeAccess({ animeId, episodeNumber, isPremium }),
+    queryKey: ["episode-access", animeId, episodeNumber],
+    queryFn: () =>
+      checkEpisodeAccess({
+        animeId,
+        episodeNumber,
+        token: localStorage.getItem("aniFlow_token") ?? undefined,
+      }),
   });
 
   // Resolve streams from installed addons.
